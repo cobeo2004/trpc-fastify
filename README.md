@@ -9,6 +9,13 @@ To install dependencies:
 bun install
 ```
 
+Before run:
+
+```bash
+bunx prisma migrate dev
+bunx prisma db push
+```
+
 To run:
 
 ```bash
