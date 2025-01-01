@@ -1,0 +1,31 @@
+{
+  "name": "trpc-fastify",
+  "module": "server.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "prisma": "6.1.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "start": "node dist/server.js",
+    "dev": "npx tsx watch server.ts",
+    "build:bun": "bun build server.ts --outdir=\"./dist\" --target=node",
+    "build:tsc": "npx tsc",
+    "dev:client": "bun run src/test/client.ts",
+    "dev:server": "bun run server.ts"
+  },
+  "dependencies": {
+    "@fastify/websocket": "^11.0.1",
+    "@prisma/client": "6.1.0",
+    "@trpc/client": "^11.0.0-rc.682",
+    "@trpc/server": "^11.0.0-rc.682",
+    "eventemitter2": "^6.4.9",
+    "fastify": "^5.2.0",
+    "ioredis": "^5.4.2",
+    "superjson": "^2.2.2",
+    "zod": "^3.24.1"
+  }
+}
