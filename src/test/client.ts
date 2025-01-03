@@ -8,13 +8,29 @@ import {
 import { type AppRouter } from "..";
 import superjson from "superjson";
 
+async function subscribeToTest(
+  trpc: ReturnType<typeof createTRPCClient<AppRouter>>
+) {
+  const sub = trpc.testSubscription.onTest.subscribe(1, {
+    onData(data) {
+      console.log(">>> Test data:", data);
+    },
+    onError(error) {
+      console.error(">>> Test subscription error:", error);
+    },
+    onComplete() {
+      console.log(">>> Test subscription completed");
+    },
+  });
+  return sub;
+}
 async function subscribeToUsers(
   trpc: ReturnType<typeof createTRPCClient<AppRouter>>
 ) {
   console.log("Starting user subscription...");
   const sub = trpc.user.onUserEvents.subscribe(undefined, {
-    onData(user) {
-      console.log(">>> New user created:", user);
+    onData(event) {
+      console.log(">>> Observed new user event:", event);
     },
     onError(error) {
       console.error(">>> User subscription error:", error);
@@ -80,6 +96,9 @@ async function start() {
   const users = await trpc.user.getUsers.query();
   console.log(">>> Initial users list:", users);
 
+  // Start test subscription
+  const testSubscription = await subscribeToTest(trpc);
+
   // Start subscription
   const subscription = await subscribeToUsers(trpc);
 
@@ -90,6 +109,7 @@ async function start() {
   process.on("SIGINT", () => {
     console.log("Cleaning up...");
     subscription.unsubscribe();
+    testSubscription.unsubscribe();
     clearInterval(interval);
     wsClient.close();
     process.exit();

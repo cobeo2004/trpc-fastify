@@ -4,10 +4,8 @@
   "type": "module",
   "devDependencies": {
     "@types/bun": "latest",
-    "prisma": "6.1.0"
-  },
-  "peerDependencies": {
-    "typescript": "^5.0.0"
+    "prisma": "6.1.0",
+    "typescript": "^5.6.2"
   },
   "scripts": {
     "start": "node dist/server.js",
@@ -15,7 +13,8 @@
     "build:bun": "bun build server.ts --outdir=\"./dist\" --target=node",
     "build:tsc": "npx tsc",
     "dev:client": "bun run src/test/client.ts",
-    "dev:server": "bun run server.ts"
+    "dev:server": "bun run server.ts",
+    "start:checkmem": "node --inspect --expose_gc --max_old_space_size=700 --optimize_for_size dist/server.js"
   },
   "dependencies": {
     "@fastify/websocket": "^11.0.1",

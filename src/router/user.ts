@@ -1,18 +1,17 @@
 import { z } from "zod";
 import type { User } from "@prisma/client";
 import { protectedProcedure, publicProcedure } from "../trpc";
-import { TRPCError, type TRPCRouterRecord } from "@trpc/server";
-import { observable } from "@trpc/server/observable";
-import { EventEmitter2Service } from "@/utils/emitter";
-
+import { tracked, TRPCError, type TRPCRouterRecord } from "@trpc/server";
+import { EventEmitterService } from "@/utils/emitter";
+import { on } from "@/utils/event-emitter";
 type UserEvent = {
   event: "create" | "update" | "delete";
   data: User;
 };
 
-const ee = new EventEmitter2Service<
+const ee = new EventEmitterService<
   "userCreated" | "userUpdated" | "userDeleted",
-  [User]
+  [UserEvent]
 >().getEmitter();
 
 export const userRouter = {
@@ -34,7 +33,7 @@ export const userRouter = {
       const user = await ctx.db.user.create({
         data: { id, ...input },
       });
-      ee.emit("userCreated", user);
+      ee.emit("userCreated", { event: "create", data: user });
       return user;
     }),
 
@@ -58,7 +57,7 @@ export const userRouter = {
         where: { id: input.id },
         data: input,
       });
-      ee.emit("userUpdated", updatedUser);
+      ee.emit("userUpdated", { event: "update", data: updatedUser });
       return updatedUser;
     }),
 
@@ -73,58 +72,111 @@ export const userRouter = {
         });
       }
       await ctx.db.user.delete({ where: { id: input } });
-      ee.emit("userDeleted", user);
+      ee.emit("userDeleted", { event: "delete", data: user });
       return user;
     }),
 
-  onUserCreated: protectedProcedure.subscription(async () => {
-    return observable<User>((emit) => {
-      const onUserCreated = (user: User) => emit.next(user);
-      ee.on("userCreated", onUserCreated);
-      return () => {
-        ee.off("userCreated", onUserCreated);
-      };
-    });
+  onUserCreated: protectedProcedure.subscription(async function* (opts) {
+    try {
+      console.log("User subscription for onUserCreated started");
+      for await (const [data] of on(ee, "userCreated", {
+        signal: opts.signal,
+      })) {
+        console.log("User subscription for onUserCreated received user:", data);
+        yield tracked(data.data.id, data.data);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new TRPCError({
+          code: "UNPROCESSABLE_CONTENT",
+          message: error.message,
+        });
+      }
+      throw error;
+    } finally {
+      console.log("User subscription for onUserCreated cancelled");
+    }
+  }),
+  onUserUpdated: protectedProcedure.subscription(async function* (opts) {
+    try {
+      for await (const [data] of on(ee, "userUpdated", {
+        signal: opts.signal,
+      })) {
+        yield tracked(data.data.id, data.data);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new TRPCError({
+          code: "UNPROCESSABLE_CONTENT",
+          message: error.message,
+        });
+      }
+      throw error;
+    } finally {
+      console.log("User subscription for onUserUpdated cancelled");
+    }
   }),
 
-  onUserUpdated: protectedProcedure.subscription(async () => {
-    return observable<User>((emit) => {
-      const onUserUpdated = (user: User) => emit.next(user);
-      ee.on("userUpdated", onUserUpdated);
-      return () => {
-        ee.off("userUpdated", onUserUpdated);
-      };
-    });
+  onUserDeleted: protectedProcedure.subscription(async function* (opts) {
+    try {
+      for await (const [data] of on(ee, "userDeleted", {
+        signal: opts.signal,
+      })) {
+        yield tracked(data.data.id, data.data);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new TRPCError({
+          code: "UNPROCESSABLE_CONTENT",
+          message: error.message,
+        });
+      }
+      throw error;
+    } finally {
+      console.log("User subscription for onUserDeleted cancelled");
+    }
   }),
 
-  onUserDeleted: protectedProcedure.subscription(async () => {
-    return observable<User>((emit) => {
-      const onUserDeleted = (user: User) => emit.next(user);
-      ee.on("userDeleted", onUserDeleted);
-      return () => {
-        ee.off("userDeleted", onUserDeleted);
-      };
-    });
-  }),
+  onUserEvents: protectedProcedure.subscription(async function* (opts) {
+    try {
+      console.log("User events subscription started");
+      const events = [
+        on(ee, "userCreated", { signal: opts.signal }),
+        on(ee, "userUpdated", { signal: opts.signal }),
+        on(ee, "userDeleted", { signal: opts.signal }),
+      ];
 
-  onUserEvents: protectedProcedure.subscription(async () => {
-    return observable<UserEvent>((emit) => {
-      const onUserCreated = (user: User) =>
-        emit.next({ event: "create", data: user });
-      const onUserUpdated = (user: User) =>
-        emit.next({ event: "update", data: user });
-      const onUserDeleted = (user: User) =>
-        emit.next({ event: "delete", data: user });
+      while (true) {
+        const results = Promise.race(
+          events.map(async (event) => {
+            const data = await event.next();
+            return data;
+          })
+        );
 
-      ee.on("userCreated", onUserCreated);
-      ee.on("userUpdated", onUserUpdated);
-      ee.on("userDeleted", onUserDeleted);
-
-      return () => {
-        ee.off("userCreated", onUserCreated);
-        ee.off("userUpdated", onUserUpdated);
-        ee.off("userDeleted", onUserDeleted);
-      };
-    });
+        if (results) {
+          switch (true) {
+            case results instanceof Promise:
+              const data = (await results).value;
+              console.log("User event:", data);
+              yield data;
+              break;
+            default:
+              console.log("Unknown event type:", results);
+              break;
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new TRPCError({
+          code: "UNPROCESSABLE_CONTENT",
+          message: error.message,
+        });
+      }
+      throw error;
+    } finally {
+      console.log("User events subscription cancelled");
+    }
   }),
 } satisfies TRPCRouterRecord;

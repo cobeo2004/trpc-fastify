@@ -1,4 +1,4 @@
-import * as UntypedEventEmitter from "events";
+import UntypedEventEmitter, { on as onUntyped } from "node:events";
 
 export default class EventEmitter<Events extends Record<string, any[]>> {
   private emitter = new UntypedEventEmitter();
@@ -100,4 +100,12 @@ export default class EventEmitter<Events extends Record<string, any[]>> {
   eventNames(): Array<keyof Events> {
     return this.emitter.eventNames() as Array<keyof Events>;
   }
+}
+
+export function on<TEvents extends Record<string, any[]>>(
+  emitter: EventEmitter<TEvents>,
+  event: keyof TEvents,
+  options?: { signal?: AbortSignal | undefined }
+): AsyncIterableIterator<TEvents[keyof TEvents]> {
+  return onUntyped(emitter as UntypedEventEmitter, event as string, options);
 }
