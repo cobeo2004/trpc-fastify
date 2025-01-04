@@ -6,22 +6,14 @@ export class RedisService {
 
   getPublisher() {
     if (!this.publisher) {
-      this.publisher = new Redis({
-        // Add your Redis configuration here
-        host: "localhost",
-        port: 6379,
-      });
+      this.publisher = new Redis(process.env.REDIS_URL as string);
     }
     return this.publisher;
   }
 
   getSubscriber() {
     if (!this.subscriber) {
-      this.subscriber = new Redis({
-        // Add your Redis configuration here
-        host: "localhost",
-        port: 6379,
-      });
+      this.subscriber = new Redis(process.env.REDIS_URL as string);
     }
     return this.subscriber;
   }

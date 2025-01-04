@@ -13,7 +13,7 @@ const server = fastify({
 });
 
 server.get("/", (req, res) => {
-  res.send("Hello World");
+  res.status(200).send("Hello World");
 });
 
 server.register(fastifyWs);
@@ -35,7 +35,7 @@ server.register(fastifyTRPCPlugin, {
   } satisfies FastifyTRPCPluginOptions<AppRouter>["trpcOptions"],
 });
 
-server.listen({ port: 3000 }, (err, addr) => {
+server.listen({ port: Number(process.env.PORT) ?? 3000 }, (err, addr) => {
   if (err) {
     console.error(err);
     process.exit(1);

@@ -73,7 +73,7 @@ async function publishTestPeriodically(
   return interval;
 }
 async function start() {
-  const port = 3000;
+  const port = Number(process.env.PORT) ?? 3000;
   const prefix = "/trpc";
   const urlEnd = `localhost:${port}${prefix}`;
   const wsClient = createWSClient({

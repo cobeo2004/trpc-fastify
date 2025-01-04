@@ -1,10 +1,10 @@
 import { protectedProcedure } from "@/trpc";
-import { RedisService } from "@/utils/redis";
+import { redisService } from "@/utils/redis";
 import type { TRPCRouterRecord } from "@trpc/server";
 import { z } from "zod";
 
-const pub = new RedisService().getPublisher();
-const sub = new RedisService().getSubscriber();
+const pub = redisService.getPublisher();
+const sub = redisService.getSubscriber();
 
 /**
  * @deprecated This router is for testing purposes only and might not be used in production.
@@ -40,8 +40,9 @@ export const testSubscriptionRouter = {
       console.error("Subscription error:", error);
       throw error;
     } finally {
-      await sub.unsubscribe(channel);
       console.log("Test subscription ended");
+      // Making sure that the subscription is closed after the function ends
+      await sub.unsubscribe(channel);
     }
   }),
 } satisfies TRPCRouterRecord;
