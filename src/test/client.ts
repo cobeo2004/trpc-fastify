@@ -11,7 +11,7 @@ import superjson from "superjson";
 async function subscribeToTest(
   trpc: ReturnType<typeof createTRPCClient<AppRouter>>
 ) {
-  const sub = trpc.testSubscription.onTest.subscribe(1, {
+  const sub = trpc.testSubscription.onTest.subscribe(undefined, {
     onData(data) {
       console.log(">>> Test data:", data);
     },
@@ -62,7 +62,16 @@ async function createUsersPeriodically(
 
   return interval;
 }
-
+async function publishTestPeriodically(
+  trpc: ReturnType<typeof createTRPCClient<AppRouter>>
+) {
+  let count = 0;
+  const interval = setInterval(async () => {
+    await trpc.testSubscription.publishTest.mutate(count);
+    count++;
+  }, 5000);
+  return interval;
+}
 async function start() {
   const port = 3000;
   const prefix = "/trpc";
@@ -103,8 +112,9 @@ async function start() {
   const subscription = await subscribeToUsers(trpc);
 
   // Start creating users periodically
-  const interval = await createUsersPeriodically(trpc);
+  // const interval = await createUsersPeriodically(trpc);
 
+  const interval = await publishTestPeriodically(trpc);
   // Keep the process running
   process.on("SIGINT", () => {
     console.log("Cleaning up...");

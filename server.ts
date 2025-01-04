@@ -41,4 +41,10 @@ server.listen({ port: 3000 }, (err, addr) => {
     process.exit(1);
   }
   console.log(`Server is running on ${addr}`);
+
+  process.on("SIGINT", () => {
+    console.log("SIGINT received, closing server...");
+    server.close();
+    process.exit(0);
+  });
 });

@@ -1,6 +1,6 @@
 import { createTRPCRouter } from "../trpc";
-import { testSubscriptionRouter } from "./test";
-import { userRouter } from "./user";
+import { testSubscriptionRouter } from "./test.router";
+import { userRouter } from "./user.router";
 
 export const appRouter = createTRPCRouter({
   user: userRouter,
